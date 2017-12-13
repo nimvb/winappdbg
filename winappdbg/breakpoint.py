@@ -516,9 +516,37 @@ class Breakpoint (object):
         event.breakpoint = self
 
         if state == self.ENABLED:
+            # suspend other thread's till TF for thread hit breakpoint activated
+            tid = aThread.get_tid()
+            aProcess.scan_threads()
+            for id in aProcess.get_thread_ids():
+                if id != tid:
+                    thread = aProcess.get_thread(id)
+                    count = thread.suspend()
+                    thread.resume()
+                    try:
+                        thread_running = count == 0
+                        if thread_running:
+                            thread.suspend()
+                    except:
+                        pass
             self.running(aProcess, aThread)
 
         elif state == self.RUNNING:
+            # resume other thread's which suspended
+            tid = aThread.get_tid()
+            aProcess.scan_threads()
+            for id in aProcess.get_thread_ids():
+                if id != tid:
+                    thread = aProcess.get_thread(id)
+                    count = thread.suspend()
+                    thread.resume()
+                    try:
+                        thread_running = count == 0
+                        if not thread_running:
+                            thread.resume()
+                    except:
+                        pass
             self.enable(aProcess, aThread)
 
         elif state == self.ONESHOT:
